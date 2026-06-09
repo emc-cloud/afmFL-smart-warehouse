@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>领星WMS对接 - AFM Smart Fulfillment</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f1419;
+      color: #e7e9ea;
+      min-height: 100vh;
+    }
+    .header {
+      background: linear-gradient(135deg, #1a1f2e 0%, #0f1419 100%);
+      border-bottom: 1px solid #2f3336;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .header-logo {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+    .header h1 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #f59e0b;
+    }
+    .header h1 span {
+      color: #71767b;
+      font-size: 13px;
+      font-weight: 400;
+      margin-left: 8px;
+    }
+    .back-btn {
+      color: #71767b;
+      text-decoration: none;
+      font-size: 14px;
+      padding: 8px 16px;
+      border: 1px solid #2f3336;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+    .back-btn:hover {
+      color: #e7e9ea;
+      border-color: #536471;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: #1a1f2e;
+      border-radius: 12px;
+      padding: 4px;
+      margin-bottom: 24px;
+    }
+    .tab {
+      flex: 1;
+      padding: 12px 20px;
+      border: none;
+      background: transparent;
+      color: #71767b;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+    .tab:hover {
+      color: #e7e9ea;
+      background: #2f3336;
+    }
+    .tab.active {
+      background: #f59e0b;
+      color: #000;
+      font-weight: 600;
+    }
+    .panel {
+      display: none;
+      background: #1a1f2e;
+      border-radius: 12px;
+      padding: 24px;
+      border: 1px solid #2f3336;
+    }
+    .panel.active {
+      display: block;
+    }
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .panel-title {
+      font-size: 18px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .filters {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .filter-input {
+      background: #0f1419;
+      border: 1px solid #2f3336;
+      color: #e7e9ea;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .filter-input:focus {
+      border-color: #f59e0b;
+    }
+    .filter-input::placeholder {
+      color: #536471;
+    }
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: #f59e0b;
+      color: #000;
+    }
+    .btn-primary:hover {
+      background: #d97706;
+    }
+    .btn-secondary {
+      background: #2f3336;
+      color: #e7e9ea;
+    }
+    .btn-secondary:hover {
+      background: #536471;
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .table-wrapper {
+      overflow-x: auto;
+      margin-top: 16px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th {
+      background: #0f1419;
+      color: #71767b;
+      font-weight: 500;
+      text-align: left;
+      padding: 12px 16px;
+      border-bottom: 1px solid #2f3336;
+      white-space: nowrap;
+    }
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid #2f3336;
+      color: #e7e9ea;
+    }
+    tr:hover td {
+      background: #0f1419;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .status-0 { background: #1d4ed8; color: #93c5fd; }
+    .status-1 { background: #7c3aed; color: #c4b5fd; }
+    .status-2 { background: #d97706; color: #fde68a; }
+    .status-3 { background: #059669; color: #6ee7b7; }
+    .status-4 { background: #dc2626; color: #fca5a5; }
+    .status-5 { background: #dc2626; color: #fca5a5; }
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 20px;
+    }
+    .page-info {
+      color: #71767b;
+      font-size: 13px;
+    }
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #71767b;
+    }
+    .loading-spinner {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      border: 3px solid #2f3336;
+      border-top-color: #f59e0b;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error-msg {
+      background: #7f1d1d;
+      color: #fca5a5;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-top: 12px;
+      font-size: 13px;
+    }
+    .success-msg {
+      background: #064e3b;
+      color: #6ee7b7;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-top: 12px;
+      font-size: 13px;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #536471;
+    }
+    .empty-state svg {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 12px;
+      opacity: 0.5;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: #0f1419;
+      border: 1px solid #2f3336;
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .stat-card .label {
+      color: #71767b;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+    .stat-card .value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #f59e0b;
+    }
+    @media (max-width: 768px) {
+      .container { padding: 16px; }
+      .tabs { flex-direction: column; }
+      .filters { flex-direction: column; width: 100%; }
+      .filter-input { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-left">
+      <div class="header-logo">W</div>
+      <h1>领星WMS对接<span>Lingxing WMS Integration</span></h1>
+    </div>
+    <a href="/admin" class="back-btn">← 返回管理后台</a>
+  </div>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('outbound')">📦 出库单</button>
+      <button class="tab" onclick="switchTab('inventory')">📊 库存查询</button>
+      <button class="tab" onclick="switchTab('warehouse')">🏭 仓库/库位</button>
+    </div>
+
+    <!-- 出库单面板 -->
+    <div id="panel-outbound" class="panel active">
+      <div class="panel-header">
+        <div class="panel-title">📦 出库单列表</div>
+        <div class="filters">
+          <input type="text" class="filter-input" id="outbound-orderNo" placeholder="出库单号（多个逗号分隔）" style="width:220px">
+          <input type="date" class="filter-input" id="outbound-startDate">
+          <input type="date" class="filter-input" id="outbound-endDate">
+          <button class="btn btn-primary" onclick="fetchOutboundOrders()">查询</button>
+          <button class="btn btn-secondary" onclick="syncOutboundOrders()">同步到本地</button>
+        </div>
+      </div>
+      <div id="outbound-message"></div>
+      <div id="outbound-content">
+        <div class="empty-state">
+          <p>点击"查询"按钮获取出库单数据</p>
+        </div>
+      </div>
+      <div id="outbound-pagination" class="pagination" style="display:none"></div>
+    </div>
+
+    <!-- 库存面板 -->
+    <div id="panel-inventory" class="panel">
+      <div class="panel-header">
+        <div class="panel-title">📊 综合库存查询</div>
+        <div class="filters">
+          <input type="text" class="filter-input" id="inventory-sku" placeholder="SKU（多个逗号分隔）" style="width:200px">
+          <input type="text" class="filter-input" id="inventory-whCode" placeholder="仓库编码" style="width:120px">
+          <select class="filter-input" id="inventory-stockType">
+            <option value="">全部类型</option>
+            <option value="0">正品</option>
+            <option value="1">次品</option>
+          </select>
+          <button class="btn btn-primary" onclick="fetchInventory()">查询</button>
+        </div>
+      </div>
+      <div id="inventory-message"></div>
+      <div id="inventory-content">
+        <div class="empty-state">
+          <p>点击"查询"按钮获取库存数据</p>
+        </div>
+      </div>
+      <div id="inventory-pagination" class="pagination" style="display:none"></div>
+    </div>
+
+    <!-- 仓库/库位面板 -->
+    <div id="panel-warehouse" class="panel">
+      <div class="panel-header">
+        <div class="panel-title">🏭 仓库/库位信息</div>
+        <div class="filters">
+          <button class="btn btn-primary" onclick="fetchWarehouses()">刷新</button>
+        </div>
+      </div>
+      <div id="warehouse-message"></div>
+      <div id="warehouse-content">
+        <div class="empty-state">
+          <p>点击"刷新"按钮获取仓库信息</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== Tab切换 =====
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById('panel-' + tabName).classList.add('active');
+    }
+
+    // ===== tRPC调用封装 =====
+    async function trpcQuery(path, input) {
+      const encodedInput = encodeURIComponent(JSON.stringify({ json: input }));
+      const url = `/api/trpc/${path}?input=${encodedInput}&_=${Date.now()}`;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      try {
+        const res = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+        clearTimeout(timeout);
+        const data = await res.json();
+        if (data && data.result && data.result.data) {
+          return data.result.data.json;
+        }
+        throw new Error(data?.error?.message || 'API调用失败');
+      } catch(e) {
+        clearTimeout(timeout);
+        if (e.name === 'AbortError') throw new Error('请求超时，请重试');
+        throw e;
+      }
+    }
+
+    async function trpcMutation(path, input) {
+      // Use direct express routes instead of tRPC to avoid serialization issues
+      const apiPath = path.replace('lingxing.', '');
+      const url = `/api/lingxing/${apiPath}`;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(input || {}),
+          signal: controller.signal,
+          cache: 'no-store',
+        });
+        clearTimeout(timeout);
+        const data = await res.json();
+        return data;
+      } catch(e) {
+        clearTimeout(timeout);
+        if (e.name === 'AbortError') throw new Error('请求超时，请重试');
+        throw e;
+      }
+    }
+
+    // ===== 出库单状态映射 =====
+    const outboundStatusMap = {
+      0: '新建',
+      1: '已取面单',
+      2: '仓库处理中',
+      3: '已出库',
+      4: '已取消',
+      5: '异常'
+    };
+
+    // ===== 出库单查询 =====
+    let outboundPage = 1;
+    async function fetchOutboundOrders(page) {
+      if (page) outboundPage = page;
+      const orderNo = document.getElementById('outbound-orderNo').value.trim();
+      const startDate = document.getElementById('outbound-startDate').value;
+      const endDate = document.getElementById('outbound-endDate').value;
+
+      const params = { page: outboundPage, pageSize: 20 };
+      if (orderNo) params.outboundOrderNos = orderNo;
+      if (startDate) params.startTime = startDate + ' 00:00:00';
+      if (endDate) params.endTime = endDate + ' 23:59:59';
+      if (startDate || endDate) params.timeType = 'orderCreateTime';
+
+      document.getElementById('outbound-content').innerHTML = '<div class="loading"><div class="loading-spinner"></div><p style="margin-top:12px">正在查询出库单...</p></div>';
+      document.getElementById('outbound-message').innerHTML = '';
+
+      try {
+        const result = await trpcMutation('lingxing.outboundOrders', params);
+        if ((result.code === 200 || result.code === '200') && result.data) {
+          renderOutboundTable(result.data);
+        } else {
+          document.getElementById('outbound-content').innerHTML = '';
+          document.getElementById('outbound-message').innerHTML = `<div class="error-msg">查询失败: ${result.msg || result.message || '未知错误'} (code: ${result.code})</div>`;
+        }
+      } catch (err) {
+        document.getElementById('outbound-content').innerHTML = '';
+        document.getElementById('outbound-message').innerHTML = `<div class="error-msg">请求错误: ${err.message}</div>`;
+      }
+    }
+
+    function renderOutboundTable(data) {
+      const records = data.records || [];
+      if (records.length === 0) {
+        document.getElementById('outbound-content').innerHTML = '<div class="empty-state"><p>暂无出库单数据</p></div>';
+        document.getElementById('outbound-pagination').style.display = 'none';
+        return;
+      }
+
+      let html = '<div class="table-wrapper"><table><thead><tr>';
+      html += '<th>出库单号</th><th>平台单号</th><th>状态</th><th>仓库</th><th>物流渠道</th><th>跟踪号</th><th>销售平台</th><th>创建时间</th>';
+      html += '</tr></thead><tbody>';
+
+      records.forEach(r => {
+        html += `<tr>
+          <td><strong>${r.outboundOrderNo || '-'}</strong></td>
+          <td>${r.platformOrderNo || r.thirdOrderNo || '-'}</td>
+          <td><span class="status-badge status-${r.status}">${outboundStatusMap[r.status] || '未知'}</span></td>
+          <td>${r.whCode || '-'}</td>
+          <td>${r.logisticsChannel || '-'}</td>
+          <td>${r.logisticsTrackNo || '-'}</td>
+          <td>${r.salesPlatform || '-'}</td>
+          <td>${r.orderCreateTime ? new Date(r.orderCreateTime).toLocaleString('zh-CN') : '-'}</td>
+        </tr>`;
+      });
+
+      html += '</tbody></table></div>';
+      document.getElementById('outbound-content').innerHTML = html;
+
+      // 分页
+      const total = data.total || 0;
+      const totalPages = Math.ceil(total / 20);
+      if (totalPages > 1) {
+        document.getElementById('outbound-pagination').style.display = 'flex';
+        document.getElementById('outbound-pagination').innerHTML = `
+          <button class="btn btn-secondary" ${outboundPage <= 1 ? 'disabled' : ''} onclick="fetchOutboundOrders(${outboundPage - 1})">上一页</button>
+          <span class="page-info">第 ${outboundPage} / ${totalPages} 页 (共${total}条)</span>
+          <button class="btn btn-secondary" ${outboundPage >= totalPages ? 'disabled' : ''} onclick="fetchOutboundOrders(${outboundPage + 1})">下一页</button>
+        `;
+      } else {
+        document.getElementById('outbound-pagination').style.display = 'none';
+      }
+    }
+
+    // ===== 同步出库单 =====
+    async function syncOutboundOrders() {
+      const startDate = document.getElementById('outbound-startDate').value;
+      const endDate = document.getElementById('outbound-endDate').value;
+
+      const params = { page: 1, pageSize: 50 };
+      if (startDate) params.startTime = startDate + ' 00:00:00';
+      if (endDate) params.endTime = endDate + ' 23:59:59';
+
+      document.getElementById('outbound-message').innerHTML = '<div class="loading"><div class="loading-spinner"></div> 正在同步出库单到本地...</div>';
+
+      try {
+        const result = await trpcMutation('lingxing.syncOutboundOrders', params);
+        if (result.success) {
+          document.getElementById('outbound-message').innerHTML = `<div class="success-msg">同步成功！共获取 ${result.synced} 条出库单（总计 ${result.total} 条）</div>`;
+        } else {
+          document.getElementById('outbound-message').innerHTML = `<div class="error-msg">同步失败: ${result.msg || '未知错误'}</div>`;
+        }
+      } catch (err) {
+        document.getElementById('outbound-message').innerHTML = `<div class="error-msg">同步错误: ${err.message}</div>`;
+      }
+    }
+
+    // ===== 库存查询 =====
+    let inventoryPage = 1;
+    async function fetchInventory(page) {
+      if (page) inventoryPage = page;
+      const sku = document.getElementById('inventory-sku').value.trim();
+      const whCode = document.getElementById('inventory-whCode').value.trim();
+      const stockType = document.getElementById('inventory-stockType').value;
+
+      const params = { page: inventoryPage, pageSize: 20 };
+      if (sku) params.skuList = sku;
+      if (whCode) params.whCodeList = whCode;
+      if (stockType !== '') params.stockType = parseInt(stockType);
+
+      document.getElementById('inventory-content').innerHTML = '<div class="loading"><div class="loading-spinner"></div><p style="margin-top:12px">正在查询库存...</p></div>';
+      document.getElementById('inventory-message').innerHTML = '';
+
+      try {
+        const result = await trpcMutation('lingxing.inventory', params);
+        if ((result.code === 200 || result.code === '200') && result.data) {
+          renderInventoryTable(result.data);
+        } else {
+          document.getElementById('inventory-content').innerHTML = '';
+          document.getElementById('inventory-message').innerHTML = `<div class="error-msg">查询失败: ${result.msg || result.message || '未知错误'} (code: ${result.code})</div>`;
+        }
+      } catch (err) {
+        document.getElementById('inventory-content').innerHTML = '';
+        document.getElementById('inventory-message').innerHTML = `<div class="error-msg">请求错误: ${err.message}</div>`;
+      }
+    }
+
+    function renderInventoryTable(data) {
+      const records = data.records || [];
+      if (records.length === 0) {
+        document.getElementById('inventory-content').innerHTML = '<div class="empty-state"><p>暂无库存数据</p></div>';
+        document.getElementById('inventory-pagination').style.display = 'none';
+        return;
+      }
+
+      // 统计卡片
+      let totalStock = 0;
+      records.forEach(r => { totalStock += (r.totalAmount || 0); });
+
+      let html = `<div class="stats-grid">
+        <div class="stat-card"><div class="label">查询结果</div><div class="value">${data.total || records.length}</div></div>
+        <div class="stat-card"><div class="label">当前页库存总量</div><div class="value">${totalStock.toLocaleString()}</div></div>
+      </div>`;
+
+      html += '<div class="table-wrapper"><table><thead><tr>';
+      html += '<th>SKU</th><th>产品名称</th><th>仓库</th><th>类型</th><th>总库存</th><th>可用</th><th>锁定</th><th>在途</th>';
+      html += '</tr></thead><tbody>';
+
+      records.forEach(r => {
+        const dtl = r.productStockDtl || {};
+        html += `<tr>
+          <td><strong>${r.sku || '-'}</strong></td>
+          <td>${r.productName || '-'}</td>
+          <td>${r.whCode || '-'}</td>
+          <td>${r.stockType == 0 ? '正品' : '次品'}</td>
+          <td><strong>${r.totalAmount || 0}</strong></td>
+          <td style="color:#6ee7b7">${dtl.availableAmount || 0}</td>
+          <td style="color:#fca5a5">${dtl.lockAmount || 0}</td>
+          <td style="color:#93c5fd">${dtl.transportAmount || 0}</td>
+        </tr>`;
+      });
+
+      html += '</tbody></table></div>';
+      document.getElementById('inventory-content').innerHTML = html;
+
+      // 分页
+      const total = data.total || 0;
+      const totalPages = Math.ceil(total / 20);
+      if (totalPages > 1) {
+        document.getElementById('inventory-pagination').style.display = 'flex';
+        document.getElementById('inventory-pagination').innerHTML = `
+          <button class="btn btn-secondary" ${inventoryPage <= 1 ? 'disabled' : ''} onclick="fetchInventory(${inventoryPage - 1})">上一页</button>
+          <span class="page-info">第 ${inventoryPage} / ${totalPages} 页 (共${total}条)</span>
+          <button class="btn btn-secondary" ${inventoryPage >= totalPages ? 'disabled' : ''} onclick="fetchInventory(${inventoryPage + 1})">下一页</button>
+        `;
+      } else {
+        document.getElementById('inventory-pagination').style.display = 'none';
+      }
+    }
+
+    // ===== 仓库/库位查询 =====
+    async function fetchWarehouses() {
+      document.getElementById('warehouse-content').innerHTML = '<div class="loading"><div class="loading-spinner"></div><p style="margin-top:12px">正在查询仓库信息...</p></div>';
+      document.getElementById('warehouse-message').innerHTML = '';
+
+      try {
+        const result = await trpcMutation('lingxing.warehouses', {});
+        if ((result.code === 200 || result.code === '200') && result.data) {
+          renderWarehouseTable(result.data);
+        } else {
+          document.getElementById('warehouse-content').innerHTML = '';
+          document.getElementById('warehouse-message').innerHTML = `<div class="error-msg">查询失败: ${result.msg || result.message || '未知错误'} (code: ${result.code})</div>`;
+        }
+      } catch (err) {
+        document.getElementById('warehouse-content').innerHTML = '';
+        document.getElementById('warehouse-message').innerHTML = `<div class="error-msg">请求错误: ${err.message}</div>`;
+      }
+    }
+
+    function renderWarehouseTable(data) {
+      const records = Array.isArray(data) ? data : (data.records || []);
+      if (records.length === 0) {
+        document.getElementById('warehouse-content').innerHTML = '<div class="empty-state"><p>暂无仓库数据</p></div>';
+        return;
+      }
+
+      let html = `<div class="stats-grid">
+        <div class="stat-card"><div class="label">仓库总数</div><div class="value">${records.length}</div></div>
+      </div>`;
+
+      html += '<div class="table-wrapper"><table><thead><tr>';
+      html += '<th>仓库编码</th><th>仓库名称</th><th>国家编码</th>';
+      html += '</tr></thead><tbody>';
+
+      records.forEach(r => {
+        html += `<tr>
+          <td><strong>${r.whCode || '-'}</strong></td>
+          <td>${r.whNameCn || '-'}</td>
+          <td>${r.countryCode || '-'}</td>
+        </tr>`;
+      });
+
+      html += '</tbody></table></div>';
+      document.getElementById('warehouse-content').innerHTML = html;
+    }
+
+    // 页面加载时自动查询仓库
+    document.addEventListener('DOMContentLoaded', () => {
+      // 设置默认日期范围（最近7天）
+      const today = new Date();
+      const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+      document.getElementById('outbound-endDate').value = today.toISOString().split('T')[0];
+      document.getElementById('outbound-startDate').value = weekAgo.toISOString().split('T')[0];
+    });
+  </script>
+</body>
+</html>

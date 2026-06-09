@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AFM Smart Fulfillment - 3D Warehouse</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #000; overflow: hidden; font-family: 'Courier New', monospace; }
+
+/* LOGIN SCREEN */
+#loginScreen {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: #000; z-index: 1000; display: flex;
+  flex-direction: column; align-items: center; justify-content: center;
+}
+#matrixCanvas {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  opacity: 0.3;
+}
+.login-box {
+  position: relative; z-index: 10; text-align: center;
+  border: 1px solid #00ff41; padding: 60px 50px;
+  background: rgba(0,0,0,0.85); border-radius: 4px;
+  box-shadow: 0 0 30px rgba(0,255,65,0.2);
+}
+.login-box h1 {
+  color: #00ff41; font-size: 28px; margin-bottom: 8px;
+  text-shadow: 0 0 10px #00ff41;
+}
+.login-box .subtitle {
+  color: #00ff41; font-size: 16px; margin-bottom: 30px; opacity: 0.8;
+}
+.login-box .address {
+  color: #00ff41; font-size: 12px; margin-bottom: 25px; opacity: 0.6;
+}
+.login-box input {
+  background: #000; border: 1px solid #00ff41; color: #00ff41;
+  padding: 12px 20px; font-size: 16px; width: 280px;
+  font-family: 'Courier New', monospace; outline: none;
+  margin-bottom: 20px; display: block; margin-left: auto; margin-right: auto;
+}
+.login-box input::placeholder { color: rgba(0,255,65,0.4); }
+.login-box input:focus { box-shadow: 0 0 10px rgba(0,255,65,0.3); }
+.login-box button {
+  background: transparent; border: 1px solid #00ff41; color: #00ff41;
+  padding: 12px 40px; font-size: 16px; cursor: pointer;
+  font-family: 'Courier New', monospace; transition: all 0.3s;
+}
+.login-box button:hover {
+  background: #00ff41; color: #000;
+  box-shadow: 0 0 20px rgba(0,255,65,0.5);
+}
+
+/* 3D CONTAINER */
+#warehouseContainer { display: none; width: 100%; height: 100vh; }
+
+/* AI WELCOME MESSAGE */
+#aiMessage {
+  display: none; position: fixed; top: 50%; left: 50%;
+  transform: translate(-50%, -50%); z-index: 500;
+  background: rgba(0,0,0,0.92); border: 2px solid #00ff41;
+  padding: 40px 50px; border-radius: 8px; max-width: 600px;
+  text-align: center; box-shadow: 0 0 40px rgba(0,255,65,0.3);
+}
+#aiMessage p {
+  color: #00ff41; font-size: 16px; line-height: 1.8;
+  text-shadow: 0 0 5px #00ff41;
+}
+#aiMessage .ai-label {
+  color: #00ff41; font-size: 12px; opacity: 0.6;
+  margin-bottom: 15px; letter-spacing: 3px;
+}
+#aiMessage .dismiss {
+  color: #00ff41; font-size: 11px; opacity: 0.4;
+  margin-top: 20px;
+}
+
+/* RIGHT PANEL */
+#rightPanel {
+  display: none; position: fixed; top: 20px; right: 20px;
+  width: 280px; z-index: 100;
+  background: rgba(0,0,0,0.85); border: 1px solid #00ff41;
+  padding: 20px; border-radius: 4px;
+  box-shadow: 0 0 15px rgba(0,255,65,0.15);
+}
+#rightPanel h3 {
+  color: #00ff41; font-size: 14px; margin-bottom: 15px;
+  border-bottom: 1px solid rgba(0,255,65,0.3); padding-bottom: 8px;
+  text-shadow: 0 0 5px #00ff41;
+}
+.schedule-item {
+  color: #00ff41; font-size: 13px; padding: 8px 0;
+  border-bottom: 1px solid rgba(0,255,65,0.1);
+  display: flex; justify-content: space-between;
+}
+.schedule-item .time { opacity: 0.7; }
+.schedule-item .carrier { font-weight: bold; }
+
+/* POPUP */
+#popup {
+  display: none; position: fixed; top: 50%; left: 50%;
+  transform: translate(-50%, -50%); z-index: 200;
+  background: rgba(0,0,0,0.92); border: 1px solid #00ff41;
+  padding: 30px; border-radius: 4px; min-width: 350px;
+  box-shadow: 0 0 30px rgba(0,255,65,0.2);
+}
+#popup h3 { color: #00ff41; margin-bottom: 15px; font-size: 16px; }
+#popup .popup-content { color: #00ff41; font-size: 13px; line-height: 1.8; }
+#popup .close-btn {
+  position: absolute; top: 10px; right: 15px;
+  color: #00ff41; cursor: pointer; font-size: 18px;
+}
+#popup table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+#popup th, #popup td {
+  color: #00ff41; padding: 6px 10px; font-size: 12px;
+  border: 1px solid rgba(0,255,65,0.2); text-align: left;
+}
+#popup th { background: rgba(0,255,65,0.1); }
+
+/* TOP LEFT INFO */
+#topInfo {
+  display: none; position: fixed; top: 20px; left: 20px; z-index: 100;
+  color: #00ff41; font-size: 12px; opacity: 0.7;
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+  <canvas id="matrixCanvas"></canvas>
+  <div class="login-box">
+    <h1>AFM SMART FULFILLMENT</h1>
+    <div class="subtitle">智能海外仓服务</div>
+    <div class="address">89-15 Jamaica Ave, Jamaica, NY 11433</div>
+    <input type="password" id="accessCode" placeholder="Enter Access Code">
+    <button onclick="doLogin()">ACCESS SYSTEM</button>
+  </div>
+</div>
+
+<!-- 3D WAREHOUSE -->
+<div id="warehouseContainer">
+  <canvas id="threeCanvas"></canvas>
+</div>
+
+<!-- AI MESSAGE -->
+<div id="aiMessage">
+  <div class="ai-label">[ AFM AI ASSISTANT ]</div>
+  <p>Welcome to the most badass warehouse this side of Jamaica Ave! 🎯<br><br>
+  While other warehouses are still using clipboards and prayers, we've got AI-powered inventory tracking, robotic sorting, and enough green neon to make the Matrix jealous.<br><br>
+  Fun fact: Our packing team processes orders faster than you can say "where's my package?" — and unlike that guy in the red suit, we actually deliver on time.<br><br>
+  Maximum effort. Minimum shipping errors. That's the AFM way. 💪</p>
+  <div class="dismiss">[ message will auto-dismiss ]</div>
+</div>
+
+<!-- RIGHT PANEL -->
+<div id="rightPanel">
+  <h3>📋 TODAY'S LOGISTICS SCHEDULE</h3>
+  <div class="schedule-item"><span class="carrier">USPS Pickup</span><span class="time">3:00 PM</span></div>
+  <div class="schedule-item"><span class="carrier">UPS Pickup</span><span class="time">5:00 PM</span></div>
+  <div class="schedule-item"><span class="carrier">FedEx Pickup</span><span class="time">6:00 PM</span></div>
+  <div style="margin-top:15px; padding-top:10px; border-top:1px solid rgba(0,255,65,0.3);">
+    <div style="color:#00ff41; font-size:11px; opacity:0.6;">WAREHOUSE STATUS</div>
+    <div style="color:#00ff41; font-size:13px; margin-top:5px;">Active Zones: 12/12</div>
+    <div style="color:#00ff41; font-size:13px;">Workers On Duty: 8</div>
+    <div style="color:#00ff41; font-size:13px;">Orders Today: 347</div>
+  </div>
+</div>
+
+<!-- POPUP -->
+<div id="popup">
+  <span class="close-btn" onclick="closePopup()">✕</span>
+  <h3 id="popupTitle"></h3>
+  <div class="popup-content" id="popupContent"></div>
+</div>
+
+<!-- TOP INFO -->
+<div id="topInfo">
+  <div>AFM SMART FULFILLMENT | 3D WAREHOUSE VIEW</div>
+  <div style="margin-top:4px;">Click on shelves or packing station to inspect</div>
+</div>
+
+<!-- THREE.JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ============ MATRIX RAIN ============
+(function() {
+  const canvas = document.getElementById('matrixCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*AFM仓储物流智能';
+  const fontSize = 14;
+  const columns = Math.floor(canvas.width / fontSize);
+  const drops = Array(columns).fill(1);
+
+  function drawMatrix() {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#00ff41';
+    ctx.font = fontSize + 'px monospace';
+    for (let i = 0; i < drops.length; i++) {
+      const text = chars[Math.floor(Math.random() * chars.length)];
+      ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+      if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+      drops[i]++;
+    }
+  }
+  setInterval(drawMatrix, 40);
+})();
+
+// ============ LOGIN ============
+function doLogin() {
+  const screen = document.getElementById('loginScreen');
+  screen.style.transition = 'opacity 1s';
+  screen.style.opacity = '0';
+  setTimeout(() => {
+    screen.style.display = 'none';
+    document.getElementById('warehouseContainer').style.display = 'block';
+    initWarehouse();
+  }, 1000);
+}
+document.getElementById('accessCode').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') doLogin();
+});
+
+// ============ THREE.JS WAREHOUSE ============
+let scene, camera, renderer, controls;
+let shelfMeshes = [], packingStation, workers = [];
+let raycaster, mouse;
+let flyInComplete = false;
+
+function initWarehouse() {
+  const canvas = document.getElementById('threeCanvas');
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x000000);
+  scene.fog = new THREE.Fog(0x000000, 50, 120);
+
+  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
+  camera.position.set(0, 40, 60);
+
+  renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);
+
+  // Lights
+  const ambient = new THREE.AmbientLight(0x001100, 0.5);
+  scene.add(ambient);
+  const dirLight = new THREE.DirectionalLight(0x00ff41, 0.3);
+  dirLight.position.set(10, 30, 10);
+  scene.add(dirLight);
+
+  // Grid floor
+  const gridHelper = new THREE.GridHelper(100, 50, 0x003300, 0x001a00);
+  scene.add(gridHelper);
+
+  // Floor
+  const floorGeo = new THREE.PlaneGeometry(100, 80);
+  const floorMat = new THREE.MeshBasicMaterial({ color: 0x000a00, transparent: true, opacity: 0.8 });
+  const floor = new THREE.Mesh(floorGeo, floorMat);
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.y = -0.1;
+  scene.add(floor);
+
+  // Walls (wireframe)
+  createWalls();
+
+  // Shelves (A1-D3, 4 rows x 3 cols = 12)
+  createShelves();
+
+  // Packing station
+  createPackingStation();
+
+  // Workers
+  createWorkers();
+
+  // Floating numbers
+  createFloatingNumbers();
+
+  // Raycaster
+  raycaster = new THREE.Raycaster();
+  mouse = new THREE.Vector2();
+
+  // Events
+  window.addEventListener('resize', onResize);
+  window.addEventListener('click', onMouseClick);
+
+  // Start fly-in animation
+  flyInAnimation();
+
+  // Animate
+  animate();
+}
+
+function createWalls() {
+  const wallMat = new THREE.LineBasicMaterial({ color: 0x003300 });
+  // Back wall
+  const points1 = [new THREE.Vector3(-50,0,-40), new THREE.Vector3(-50,15,-40),
+                   new THREE.Vector3(50,15,-40), new THREE.Vector3(50,0,-40)];
+  const geo1 = new THREE.BufferGeometry().setFromPoints(points1);
+  scene.add(new THREE.Line(geo1, wallMat));
+  // Side walls
+  const points2 = [new THREE.Vector3(-50,0,-40), new THREE.Vector3(-50,15,-40),
+                   new THREE.Vector3(-50,15,40), new THREE.Vector3(-50,0,40)];
+  const geo2 = new THREE.BufferGeometry().setFromPoints(points2);
+  scene.add(new THREE.Line(geo2, wallMat));
+  const points3 = [new THREE.Vector3(50,0,-40), new THREE.Vector3(50,15,-40),
+                   new THREE.Vector3(50,15,40), new THREE.Vector3(50,0,40)];
+  const geo3 = new THREE.BufferGeometry().setFromPoints(points3);
+  scene.add(new THREE.Line(geo3, wallMat));
+
+  // Ceiling beams
+  for (let i = -40; i <= 40; i += 20) {
+    const pts = [new THREE.Vector3(-50, 15, i), new THREE.Vector3(50, 15, i)];
+    const g = new THREE.BufferGeometry().setFromPoints(pts);
+    scene.add(new THREE.Line(g, wallMat));
+  }
+}
+
+const shelfData = {
+  'A1': { skus: ['SKU-1001 Phone Case x120', 'SKU-1002 Screen Protector x340', 'SKU-1003 Charger x85'] },
+  'A2': { skus: ['SKU-1004 Bluetooth Earbuds x200', 'SKU-1005 USB Cable x450', 'SKU-1006 Power Bank x67'] },
+  'A3': { skus: ['SKU-1007 Laptop Stand x45', 'SKU-1008 Mouse Pad x280', 'SKU-1009 Webcam x92'] },
+  'B1': { skus: ['SKU-2001 T-Shirt (M) x150', 'SKU-2002 T-Shirt (L) x130', 'SKU-2003 Hoodie x75'] },
+  'B2': { skus: ['SKU-2004 Sneakers x60', 'SKU-2005 Socks Pack x320', 'SKU-2006 Cap x180'] },
+  'B3': { skus: ['SKU-2007 Backpack x40', 'SKU-2008 Wallet x95', 'SKU-2009 Sunglasses x110'] },
+  'C1': { skus: ['SKU-3001 Vitamin C x500', 'SKU-3002 Protein Powder x88', 'SKU-3003 Fish Oil x220'] },
+  'C2': { skus: ['SKU-3004 Face Cream x160', 'SKU-3005 Shampoo x240', 'SKU-3006 Toothpaste x380'] },
+  'C3': { skus: ['SKU-3007 Essential Oil x90', 'SKU-3008 Hand Sanitizer x420', 'SKU-3009 Lip Balm x550'] },
+  'D1': { skus: ['SKU-4001 Action Figure x35', 'SKU-4002 Board Game x28', 'SKU-4003 Puzzle x65'] },
+  'D2': { skus: ['SKU-4004 Plush Toy x140', 'SKU-4005 RC Car x22', 'SKU-4006 Card Game x190'] },
+  'D3': { skus: ['SKU-4007 Drone Mini x15', 'SKU-4008 VR Headset x8', 'SKU-4009 Smart Watch x42'] }
+};
+
+function createShelves() {
+  const zones = ['A1','A2','A3','B1','B2','B3','C1','C2','C3','D1','D2','D3'];
+  let idx = 0;
+  for (let row = 0; row < 4; row++) {
+    for (let col = 0; col < 3; col++) {
+      const x = -30 + col * 20;
+      const z = -25 + row * 14;
+      const shelf = createShelf(x, z, zones[idx]);
+      shelf.userData = { zone: zones[idx], type: 'shelf' };
+      shelfMeshes.push(shelf);
+      idx++;
+    }
+  }
+}
+
+function createShelf(x, z, label) {
+  const group = new THREE.Group();
+  group.position.set(x, 0, z);
+
+  // Shelf frame (wireframe boxes stacked)
+  const frameMat = new THREE.MeshBasicMaterial({ color: 0x00ff41, wireframe: true, transparent: true, opacity: 0.4 });
+  for (let level = 0; level < 3; level++) {
+    const shelfGeo = new THREE.BoxGeometry(8, 0.2, 4);
+    const shelfMesh = new THREE.Mesh(shelfGeo, frameMat);
+    shelfMesh.position.y = 2 + level * 3;
+    group.add(shelfMesh);
+  }
+
+  // Vertical posts
+  const postGeo = new THREE.BoxGeometry(0.2, 9, 0.2);
+  const postMat = new THREE.MeshBasicMaterial({ color: 0x00ff41, transparent: true, opacity: 0.6 });
+  const positions = [[-3.8, 4.5, -1.8], [3.8, 4.5, -1.8], [-3.8, 4.5, 1.8], [3.8, 4.5, 1.8]];
+  positions.forEach(p => {
+    const post = new THREE.Mesh(postGeo, postMat);
+    post.position.set(p[0], p[1], p[2]);
+    group.add(post);
+  });
+
+  // Boxes on shelves
+  const boxMat = new THREE.MeshBasicMaterial({ color: 0x004400, transparent: true, opacity: 0.7 });
+  for (let level = 0; level < 3; level++) {
+    const numBoxes = 2 + Math.floor(Math.random() * 3);
+    for (let b = 0; b < numBoxes; b++) {
+      const bw = 0.8 + Math.random() * 1.2;
+      const bh = 0.8 + Math.random() * 1.5;
+      const bd = 0.8 + Math.random() * 1;
+      const boxGeo = new THREE.BoxGeometry(bw, bh, bd);
+      const box = new THREE.Mesh(boxGeo, boxMat);
+      box.position.set(-2.5 + b * 2, 2.5 + level * 3, 0);
+      group.add(box);
+    }
+  }
+
+  // Zone label (sprite)
+  const labelCanvas = document.createElement('canvas');
+  labelCanvas.width = 128; labelCanvas.height = 64;
+  const lctx = labelCanvas.getContext('2d');
+  lctx.fillStyle = '#00ff41';
+  lctx.font = 'bold 36px Courier New';
+  lctx.textAlign = 'center';
+  lctx.fillText(label, 64, 44);
+  const labelTex = new THREE.CanvasTexture(labelCanvas);
+  const labelMat = new THREE.SpriteMaterial({ map: labelTex, transparent: true });
+  const labelSprite = new THREE.Sprite(labelMat);
+  labelSprite.position.set(0, 10.5, 0);
+  labelSprite.scale.set(4, 2, 1);
+  group.add(labelSprite);
+
+  // Clickable invisible box for raycasting
+  const clickGeo = new THREE.BoxGeometry(9, 10, 5);
+  const clickMat = new THREE.MeshBasicMaterial({ visible: false });
+  const clickMesh = new THREE.Mesh(clickGeo, clickMat);
+  clickMesh.position.y = 5;
+  clickMesh.userData = { zone: label, type: 'shelf' };
+  group.add(clickMesh);
+  shelfMeshes.push(clickMesh);
+
+  scene.add(group);
+  return group;
+}
+
+function createPackingStation() {
+  const group = new THREE.Group();
+  group.position.set(35, 0, 20);
+
+  // Table
+  const tableMat = new THREE.MeshBasicMaterial({ color: 0x00ff41, wireframe: true, transparent: true, opacity: 0.5 });
+  const tableGeo = new THREE.BoxGeometry(12, 3, 6);
+  const table = new THREE.Mesh(tableGeo, tableMat);
+  table.position.y = 1.5;
+  group.add(table);
+
+  // Conveyor belt
+  const beltMat = new THREE.MeshBasicMaterial({ color: 0x003300, transparent: true, opacity: 0.8 });
+  const beltGeo = new THREE.BoxGeometry(14, 0.3, 2);
+  const belt = new THREE.Mesh(beltGeo, beltMat);
+  belt.position.set(0, 3.2, 0);
+  group.add(belt);
+
+  // Packages on belt
+  const pkgMat = new THREE.MeshBasicMaterial({ color: 0x006600 });
+  for (let i = 0; i < 4; i++) {
+    const pkg = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1, 1), pkgMat);
+    pkg.position.set(-4 + i * 2.5, 3.8, 0);
+    group.add(pkg);
+  }
+
+  // Label
+  const lc = document.createElement('canvas');
+  lc.width = 256; lc.height = 64;
+  const lctx = lc.getContext('2d');
+  lctx.fillStyle = '#00ff41';
+  lctx.font = 'bold 24px Courier New';
+  lctx.textAlign = 'center';
+  lctx.fillText('PACKING STATION', 128, 44);
+  const lt = new THREE.CanvasTexture(lc);
+  const ls = new THREE.Sprite(new THREE.SpriteMaterial({ map: lt, transparent: true }));
+  ls.position.set(0, 7, 0);
+  ls.scale.set(8, 2, 1);
+  group.add(ls);
+
+  // Click target
+  const clickGeo = new THREE.BoxGeometry(14, 8, 7);
+  const clickMat = new THREE.MeshBasicMaterial({ visible: false });
+  packingStation = new THREE.Mesh(clickGeo, clickMat);
+  packingStation.position.y = 4;
+  packingStation.userData = { type: 'packing' };
+  group.add(packingStation);
+
+  scene.add(group);
+}
+
+function createWorkers() {
+  for (let i = 0; i < 4; i++) {
+    const worker = createWorkerFigure();
+    worker.position.set(-20 + i * 12, 0, -10 + Math.random() * 30);
+    worker.userData = {
+      speed: 0.02 + Math.random() * 0.02,
+      direction: new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize(),
+      timer: 0,
+      changeTime: 100 + Math.random() * 200
+    };
+    workers.push(worker);
+    scene.add(worker);
+  }
+}
+
+function createWorkerFigure() {
+  const group = new THREE.Group();
+  const mat = new THREE.MeshBasicMaterial({ color: 0x00ff41, wireframe: true, transparent: true, opacity: 0.7 });
+
+  // Body
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 0.6), mat);
+  body.position.y = 3;
+  group.add(body);
+
+  // Head
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 6), mat);
+  head.position.y = 4.5;
+  group.add(head);
+
+  // Legs
+  const legGeo = new THREE.BoxGeometry(0.3, 1.5, 0.3);
+  const legL = new THREE.Mesh(legGeo, mat);
+  legL.position.set(-0.25, 1, 0);
+  group.add(legL);
+  const legR = new THREE.Mesh(legGeo, mat);
+  legR.position.set(0.25, 1, 0);
+  group.add(legR);
+
+  // Arms
+  const armGeo = new THREE.BoxGeometry(0.25, 1.2, 0.25);
+  const armL = new THREE.Mesh(armGeo, mat);
+  armL.position.set(-0.7, 3, 0);
+  group.add(armL);
+  const armR = new THREE.Mesh(armGeo, mat);
+  armR.position.set(0.7, 3, 0);
+  group.add(armR);
+
+  return group;
+}
+
+function createFloatingNumbers() {
+  const zones = ['A1','A2','A3','B1','B2','B3','C1','C2','C3','D1','D2','D3'];
+  let idx = 0;
+  for (let row = 0; row < 4; row++) {
+    for (let col = 0; col < 3; col++) {
+      const x = -30 + col * 20;
+      const z = -25 + row * 14;
+      const count = Math.floor(Math.random() * 500) + 100;
+
+      const nc = document.createElement('canvas');
+      nc.width = 128; nc.height = 64;
+      const nctx = nc.getContext('2d');
+      nctx.fillStyle = '#00ff41';
+      nctx.font = 'bold 28px Courier New';
+      nctx.textAlign = 'center';
+      nctx.shadowColor = '#00ff41';
+      nctx.shadowBlur = 10;
+      nctx.fillText(count.toString(), 64, 44);
+      const nt = new THREE.CanvasTexture(nc);
+      const ns = new THREE.Sprite(new THREE.SpriteMaterial({ map: nt, transparent: true }));
+      ns.position.set(x, 12, z);
+      ns.scale.set(3, 1.5, 1);
+      ns.userData = { baseY: 12, time: Math.random() * Math.PI * 2 };
+      scene.add(ns);
+      idx++;
+    }
+  }
+}
+
+// ============ FLY-IN ANIMATION ============
+function flyInAnimation() {
+  const startPos = { x: 0, y: 50, z: 80 };
+  const endPos = { x: 0, y: 20, z: 35 };
+  const duration = 3000;
+  const startTime = Date.now();
+
+  camera.position.set(startPos.x, startPos.y, startPos.z);
+  camera.lookAt(0, 3, 0);
+
+  function animateFlyIn() {
+    const elapsed = Date.now() - startTime;
+    const t = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - t, 3); // ease out cubic
+
+    camera.position.x = startPos.x + (endPos.x - startPos.x) * eased;
+    camera.position.y = startPos.y + (endPos.y - startPos.y) * eased;
+    camera.position.z = startPos.z + (endPos.z - startPos.z) * eased;
+    camera.lookAt(0, 3, 0);
+
+    if (t < 1) {
+      requestAnimationFrame(animateFlyIn);
+    } else {
+      flyInComplete = true;
+      enableOrbitControls();
+      showUI();
+    }
+  }
+  animateFlyIn();
+}
+
+function enableOrbitControls() {
+  // Simple orbit controls (no library needed)
+  let isDown = false, startX, startY, rotX = 0, rotY = 0.5;
+  const radius = 40;
+  const target = new THREE.Vector3(0, 3, 0);
+
+  function updateCamera() {
+    camera.position.x = target.x + radius * Math.sin(rotX) * Math.cos(rotY);
+    camera.position.y = target.y + radius * Math.sin(rotY);
+    camera.position.z = target.z + radius * Math.cos(rotX) * Math.cos(rotY);
+    camera.lookAt(target);
+  }
+  updateCamera();
+
+  const cvs = renderer.domElement;
+  cvs.addEventListener('mousedown', (e) => { if(e.button===0){isDown=true; startX=e.clientX; startY=e.clientY;} });
+  cvs.addEventListener('mousemove', (e) => {
+    if (!isDown) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    rotX += dx * 0.005;
+    rotY = Math.max(0.1, Math.min(1.4, rotY + dy * 0.005));
+    startX = e.clientX; startY = e.clientY;
+    updateCamera();
+  });
+  cvs.addEventListener('mouseup', () => { isDown = false; });
+  cvs.addEventListener('mouseleave', () => { isDown = false; });
+  cvs.addEventListener('wheel', (e) => {
+    // no zoom to keep it simple
+    e.preventDefault();
+  }, { passive: false });
+
+  // Touch support
+  cvs.addEventListener('touchstart', (e) => { isDown=true; startX=e.touches[0].clientX; startY=e.touches[0].clientY; });
+  cvs.addEventListener('touchmove', (e) => {
+    if (!isDown) return;
+    const dx = e.touches[0].clientX - startX;
+    const dy = e.touches[0].clientY - startY;
+    rotX += dx * 0.005;
+    rotY = Math.max(0.1, Math.min(1.4, rotY + dy * 0.005));
+    startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+    updateCamera();
+  });
+  cvs.addEventListener('touchend', () => { isDown = false; });
+}
+
+function showUI() {
+  document.getElementById('rightPanel').style.display = 'block';
+  document.getElementById('topInfo').style.display = 'block';
+
+  // Show AI message after a brief delay
+  setTimeout(() => {
+    document.getElementById('aiMessage').style.display = 'block';
+    // Auto dismiss after 12 seconds
+    setTimeout(() => {
+      document.getElementById('aiMessage').style.display = 'none';
+    }, 12000);
+  }, 500);
+}
+
+// ============ CLICK HANDLING ============
+function onMouseClick(event) {
+  if (!flyInComplete) return;
+  // Ignore if AI message is showing and clicked on it
+  const aiMsg = document.getElementById('aiMessage');
+  if (aiMsg.style.display === 'block') {
+    aiMsg.style.display = 'none';
+    return;
+  }
+
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+
+  // Check packing station
+  if (packingStation) {
+    const pInt = raycaster.intersectObject(packingStation);
+    if (pInt.length > 0) {
+      showPackingPopup();
+      return;
+    }
+  }
+
+  // Check shelves
+  const allClickables = [];
+  scene.traverse((obj) => {
+    if (obj.userData && obj.userData.type === 'shelf' && obj.isMesh) {
+      allClickables.push(obj);
+    }
+  });
+  const intersects = raycaster.intersectObjects(allClickables);
+  if (intersects.length > 0) {
+    const zone = intersects[0].object.userData.zone;
+    if (zone && shelfData[zone]) {
+      showShelfPopup(zone);
+    }
+  }
+}
+
+function showShelfPopup(zone) {
+  const popup = document.getElementById('popup');
+  const title = document.getElementById('popupTitle');
+  const content = document.getElementById('popupContent');
+
+  title.textContent = 'Zone ' + zone + ' - Inventory Details';
+  let html = '<table><tr><th>SKU</th><th>Item</th><th>Qty</th></tr>';
+  shelfData[zone].skus.forEach(s => {
+    const parts = s.split(' x');
+    const qty = parts[parts.length - 1];
+    const item = s.replace(' x' + qty, '');
+    const skuCode = item.split(' ')[0];
+    const itemName = item.replace(skuCode + ' ', '');
+    html += '<tr><td>' + skuCode + '</td><td>' + itemName + '</td><td>' + qty + '</td></tr>';
+  });
+  html += '</table>';
+  content.innerHTML = html;
+  popup.style.display = 'block';
+}
+
+function showPackingPopup() {
+  const popup = document.getElementById('popup');
+  const title = document.getElementById('popupTitle');
+  const content = document.getElementById('popupContent');
+
+  title.textContent = 'Packing Station - Outbound Records';
+  content.innerHTML = '<table><tr><th>Order #</th><th>Carrier</th><th>Status</th><th>Time</th></tr>' +
+    '<tr><td>AFM-20260609-001</td><td>USPS</td><td>Packed</td><td>09:15 AM</td></tr>' +
+    '<tr><td>AFM-20260609-002</td><td>UPS</td><td>Packed</td><td>09:32 AM</td></tr>' +
+    '<tr><td>AFM-20260609-003</td><td>FedEx</td><td>Packing</td><td>10:05 AM</td></tr>' +
+    '<tr><td>AFM-20260609-004</td><td>USPS</td><td>Packed</td><td>10:28 AM</td></tr>' +
+    '<tr><td>AFM-20260609-005</td><td>UPS</td><td>Labeled</td><td>10:45 AM</td></tr>' +
+    '</table>' +
+    '<div style="margin-top:12px;font-size:11px;opacity:0.6;">Showing latest 5 records | Total today: 347</div>';
+  popup.style.display = 'block';
+}
+
+function closePopup() {
+  document.getElementById('popup').style.display = 'none';
+}
+
+// ============ ANIMATION LOOP ============
+function animate() {
+  requestAnimationFrame(animate);
+
+  // Animate workers
+  workers.forEach(w => {
+    w.position.x += w.userData.direction.x * w.userData.speed * 2;
+    w.position.z += w.userData.direction.z * w.userData.speed * 2;
+    w.userData.timer++;
+
+    // Bobbing motion
+    w.children.forEach((child, i) => {
+      if (i === 2 || i === 3) { // legs
+        child.position.y = 1 + Math.sin(w.userData.timer * 0.1 + i) * 0.2;
+      }
+    });
+
+    // Change direction
+    if (w.userData.timer > w.userData.changeTime) {
+      w.userData.direction = new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+      w.userData.timer = 0;
+      w.userData.changeTime = 100 + Math.random() * 200;
+    }
+
+    // Keep in bounds
+    if (w.position.x < -40 || w.position.x > 40) w.userData.direction.x *= -1;
+    if (w.position.z < -35 || w.position.z > 35) w.userData.direction.z *= -1;
+
+    // Face direction
+    w.rotation.y = Math.atan2(w.userData.direction.x, w.userData.direction.z);
+  });
+
+  // Animate floating numbers (bob up and down)
+  scene.traverse((obj) => {
+    if (obj.isSprite && obj.userData.baseY) {
+      obj.userData.time += 0.02;
+      obj.position.y = obj.userData.baseY + Math.sin(obj.userData.time) * 0.3;
+    }
+  });
+
+  renderer.render(scene, camera);
+}
+
+function onResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+</script>
+</body>
+</html>

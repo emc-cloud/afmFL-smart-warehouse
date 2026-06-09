@@ -1,0 +1,22 @@
+{
+  "name": "afm-pickapp",
+  "version": "2.0.0",
+  "description": "AFM Smart Fulfillment - Mobile-First Warehouse Picking App",
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "@trpc/server": "^11.6.0",
+    "superjson": "^1.13.3",
+    "better-sqlite3": "^11.7.0",
+    "qrcode": "^1.5.4",
+    "multer": "^1.4.5-lts.1",
+    "xlsx": "^0.18.5",
+    "pdf-parse": "^1.1.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7"
+  }
+}
