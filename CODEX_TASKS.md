@@ -37,7 +37,21 @@ This document outlines the features and components that Team B (Codex) is respon
 - Shipping carrier setup and API integrations
 - System preferences and defaults
 
-### 7. Lingxing WMS Integration
+### 7. Order Video Playback
+- Record and store video clips of each order's packing/shipping process
+- Link video to specific order number for easy lookup
+- Video playback interface for managers to review outbound operations
+- Support filtering by date, order number, or employee
+- Integration with warehouse surveillance cameras
+
+### 8. Shipping Time Tracking
+- Record exact shipping/outbound time for each order
+- Dashboard showing daily/weekly shipping performance
+- Alert when orders exceed expected processing time
+- Historical data and trends analysis
+- Export reports for client review
+
+### 9. Lingxing WMS Integration
 - Full integration with Lingxing WMS API
 - Sync inventory, orders, and shipment status
 - (Note: API documentation is available and some basic routes are already set up in `server/lingxing-wms.js` and `server/lingxing-express-routes.js`)
